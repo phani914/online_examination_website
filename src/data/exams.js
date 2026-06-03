@@ -1,0 +1,106 @@
+export const exams = [
+  {
+    id: 'math-101',
+    subject: 'Mathematics',
+    title: 'Algebra Fundamentals',
+    duration: 45,
+    questions: 30,
+  },
+  {
+    id: 'science-201',
+    subject: 'Science',
+    title: 'Physics Basics',
+    duration: 60,
+    questions: 40,
+  },
+  {
+    id: 'cs-301',
+    subject: 'Computer Science',
+    title: 'Programming Concepts',
+    duration: 50,
+    questions: 35,
+  },
+];
+
+export const sampleQuestions = [
+  {
+    id: 'q1',
+    number: 1,
+    prompt: 'Which data structure uses first-in, first-out ordering?',
+    options: ['Stack', 'Queue', 'Tree', 'Graph'],
+    correctAnswer: 'Queue',
+  },
+  {
+    id: 'q2',
+    number: 2,
+    prompt: 'What is the result of 12 divided by 3?',
+    options: ['2', '3', '4', '6'],
+    correctAnswer: '4',
+  },
+  {
+    id: 'q3',
+    number: 3,
+    prompt: 'Which HTML tag is used to create a hyperlink?',
+    options: ['<link>', '<a>', '<href>', '<nav>'],
+    correctAnswer: '<a>',
+  },
+  {
+    id: 'q4',
+    number: 4,
+    prompt: 'Which keyword declares a block-scoped variable in JavaScript?',
+    options: ['var', 'let', 'static', 'define'],
+    correctAnswer: 'let',
+  },
+  {
+    id: 'q5',
+    number: 5,
+    prompt: 'What does CPU stand for?',
+    options: [
+      'Central Processing Unit',
+      'Computer Personal Unit',
+      'Central Program Utility',
+      'Control Processing User',
+    ],
+    correctAnswer: 'Central Processing Unit',
+  },
+  {
+    id: 'q6',
+    number: 6,
+    prompt: 'Which of these is a valid CSS property?',
+    options: ['font-weight', 'text-bold', 'font-style-weight', 'weight-font'],
+    correctAnswer: 'font-weight',
+  },
+  {
+    id: 'q7',
+    number: 7,
+    prompt: 'Which protocol is commonly used to transfer web pages?',
+    options: ['FTP', 'SMTP', 'HTTP', 'SSH'],
+    correctAnswer: 'HTTP',
+  },
+  {
+    id: 'q8',
+    number: 8,
+    prompt: 'In DBMS, what does SQL stand for?',
+    options: [
+      'Structured Query Language',
+      'System Query Logic',
+      'Sequential Question Language',
+      'Standard Queue Library',
+    ],
+    correctAnswer: 'Structured Query Language',
+  },
+  {
+    id: 'q9',
+    number: 9,
+    prompt: 'Which operator is used for strict equality in JavaScript?',
+    options: ['==', '===', '=', '!=='],
+    correctAnswer: '===',
+  },
+  {
+    id: 'q10',
+    number: 10,
+    prompt: 'Which network device forwards data packets between computer networks?',
+    options: ['Router', 'Monitor', 'Keyboard', 'Scanner'],
+    correctAnswer: 'Router',
+  },
+];
