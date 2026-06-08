@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { CheckCircle2, ClipboardList, Info, Lock, Timer } from 'lucide-react';
 import QuestionPanel from '../components/QuestionPanel.jsx';
@@ -16,22 +16,24 @@ export default function ExamPage() {
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
   const totalExamSeconds = (exam?.duration ?? 45) * 60;
-  const secondsRemaining = useCountdown(session ? totalExamSeconds : 0);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const secondsRemaining = useCountdown(
+    session ? totalExamSeconds : 0,
+    Boolean(session) && !isSubmitted,
+  );
   const activeQuestion = sampleQuestions[activeQuestionIndex];
   const answeredCount = Object.keys(selectedAnswers).length;
   const progress = Math.round((answeredCount / sampleQuestions.length) * 100);
-  const timerProgress = Math.round((secondsRemaining / totalExamSeconds) * 100);
-  const isTimerWarning = secondsRemaining <= 300;
+  const timerProgress = Math.max(0, Math.round((secondsRemaining / totalExamSeconds) * 100));
+  const isTimerWarning = secondsRemaining > 0 && secondsRemaining <= 300;
   const [scoreResult, setScoreResult] = useState(null);
+  const [submissionNotice, setSubmissionNotice] = useState(null);
+  const hasFinalizedSubmission = useRef(false);
+  const examStartedAt = useRef(new Date().toISOString());
 
-  useEffect(() => {
-    if (secondsRemaining === 0 && !isSubmitted) {
-      submitExam('Time is over.');
-    }
-  }, [isSubmitted, secondsRemaining]);
-
-  function calculateScore() {
+  const calculateScore = useCallback((submissionType) => {
+    const savedUser = JSON.parse(window.localStorage.getItem('examPortalUser') || 'null');
+    const studentName = savedUser?.email === session?.email ? savedUser.name : 'Demo Student';
     const correctCount = sampleQuestions.filter(
       (question) => selectedAnswers[question.id] === question.correctAnswer,
     ).length;
@@ -42,8 +44,12 @@ export default function ExamPage() {
     const status = percentage >= 40 ? 'Passed' : 'Failed';
 
     return {
+      attemptId: `${exam.id}-${Date.now()}`,
       examId: exam.id,
       examTitle: exam.title,
+      subject: exam.subject,
+      studentName,
+      studentEmail: session?.email ?? 'guest',
       correctCount,
       wrongCount,
       unansweredCount,
@@ -51,25 +57,83 @@ export default function ExamPage() {
       totalQuestions,
       percentage,
       status,
+      submittedBy: session?.email ?? 'guest',
+      submissionType,
+      startedAt: examStartedAt.current,
       submittedAt: new Date().toISOString(),
-    };
-  }
+      durationMinutes: exam.duration,
+      timeSpentSeconds: Math.max(totalExamSeconds - secondsRemaining, 0),
+      remainingSeconds: Math.max(secondsRemaining, 0),
+      answers: sampleQuestions.map((question) => {
+        const selectedAnswer = selectedAnswers[question.id] || null;
 
-  function submitExam(prefix = 'Exam submitted.') {
-    const result = calculateScore();
+        return {
+          questionId: question.id,
+          questionNumber: question.number,
+          prompt: question.prompt,
+          selectedAnswer,
+          correctAnswer: question.correctAnswer,
+          status: selectedAnswer
+            ? selectedAnswer === question.correctAnswer
+              ? 'Correct'
+              : 'Wrong'
+            : 'Unanswered',
+        };
+      }),
+    };
+  }, [answeredCount, exam, secondsRemaining, selectedAnswers, session, totalExamSeconds]);
+
+  const saveResult = useCallback((result) => {
     const previousResults = JSON.parse(
       window.localStorage.getItem('examPortalResultHistory') || '[]',
     );
 
-    setIsSubmitted(true);
-    setScoreResult(result);
     window.localStorage.setItem('examPortalLatestResult', JSON.stringify(result));
     window.localStorage.setItem(
       'examPortalResultHistory',
       JSON.stringify([result, ...previousResults].slice(0, 8)),
     );
-    window.alert(`${prefix} Score: ${result.correctCount}/${result.totalQuestions} (${result.percentage}%).`);
-  }
+  }, []);
+
+  const finalizeSubmission = useCallback((submissionType = 'manual') => {
+    if (!exam || hasFinalizedSubmission.current) return;
+
+    hasFinalizedSubmission.current = true;
+    const result = calculateScore(submissionType);
+
+    saveResult(result);
+    setIsSubmitted(true);
+    setScoreResult(result);
+    setSubmissionNotice({
+      title: submissionType === 'timeout' ? 'Time is over' : 'Exam submitted',
+      message:
+        submissionType === 'timeout'
+          ? 'Your answers were submitted automatically after the timer ended.'
+          : 'Your answers were submitted successfully.',
+    });
+  }, [calculateScore, exam, saveResult]);
+
+  const handleManualSubmit = useCallback(() => {
+    if (isSubmitted) return;
+
+    const unansweredCount = sampleQuestions.length - answeredCount;
+
+    if (unansweredCount > 0) {
+      const shouldSubmit = window.confirm(
+        `${unansweredCount} question${unansweredCount > 1 ? 's are' : ' is'} unanswered. Submit anyway?`,
+      );
+
+      if (!shouldSubmit) return;
+    }
+
+    finalizeSubmission('manual');
+  }, [answeredCount, finalizeSubmission, isSubmitted]);
+
+  useEffect(() => {
+    if (session && secondsRemaining === 0 && !isSubmitted) {
+      finalizeSubmission('timeout');
+    }
+  }, [finalizeSubmission, isSubmitted, secondsRemaining, session]);
 
   if (!exam) {
     return <p className="empty-state">Exam not found.</p>;
@@ -133,6 +197,7 @@ export default function ExamPage() {
             onSelectAnswer={(answer) =>
               setSelectedAnswers((current) => ({ ...current, [activeQuestion.id]: answer }))
             }
+            isLocked={isSubmitted}
           />
 
           <div className="exam-actions">
@@ -262,13 +327,49 @@ export default function ExamPage() {
             className="submit-exam-button"
             type="button"
             disabled={isSubmitted}
-            onClick={() => submitExam()}
+            onClick={handleManualSubmit}
           >
             <CheckCircle2 size={18} />
             {isSubmitted ? 'Submitted' : 'Submit Exam'}
           </button>
         </aside>
       </div>
+
+      {submissionNotice && scoreResult && (
+        <div className="submission-modal-backdrop" role="presentation">
+          <section
+            className="submission-modal"
+            role="alertdialog"
+            aria-labelledby="submission-title"
+            aria-describedby="submission-message"
+          >
+            <div>
+              <p className="eyebrow">Submission Complete</p>
+              <h2 id="submission-title">{submissionNotice.title}</h2>
+              <p id="submission-message">{submissionNotice.message}</p>
+            </div>
+            <div className="submission-summary">
+              <span>Score</span>
+              <strong>
+                {scoreResult.correctCount}/{scoreResult.totalQuestions}
+              </strong>
+              <small>{scoreResult.percentage}% - {scoreResult.status}</small>
+            </div>
+            <div className="submission-actions">
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={() => setSubmissionNotice(null)}
+              >
+                Review Answers
+              </button>
+              <Link className="primary-button" to="/results">
+                View Results
+              </Link>
+            </div>
+          </section>
+        </div>
+      )}
     </section>
   );
 }

@@ -159,13 +159,16 @@ export default function ResultsPage() {
           </div>
           {results.map((result, index) => (
             <div role="row" key={`${result.examTitle}-${result.submittedAt}-${index}`}>
-              <span>{result.examTitle}</span>
-              <span>{result.percentage}%</span>
-              <span>
+              <span data-label="Exam">{result.examTitle}</span>
+              <span data-label="Score">{result.percentage}%</span>
+              <span data-label="Correct">
                 {result.correctCount}/{result.totalQuestions}
               </span>
-              <span>{formatDate(result.submittedAt)}</span>
-              <span className={result.status === 'Passed' ? 'status-pill' : 'status-pill failed'}>
+              <span data-label="Date">{formatDate(result.submittedAt)}</span>
+              <span
+                className={result.status === 'Passed' ? 'status-pill' : 'status-pill failed'}
+                data-label="Status"
+              >
                 {result.status}
               </span>
             </div>

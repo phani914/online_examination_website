@@ -1,4 +1,4 @@
-export default function QuestionPanel({ question, selectedAnswer, onSelectAnswer }) {
+export default function QuestionPanel({ question, selectedAnswer, onSelectAnswer, isLocked = false }) {
   return (
     <section className="question-panel">
       <p className="eyebrow">Question {question.number}</p>
@@ -6,12 +6,16 @@ export default function QuestionPanel({ question, selectedAnswer, onSelectAnswer
 
       <div className="answer-list">
         {question.options.map((option) => (
-          <label className="answer-option" key={option}>
+          <label
+            className={selectedAnswer === option ? 'answer-option selected' : 'answer-option'}
+            key={option}
+          >
             <input
               type="radio"
               name={`question-${question.id}`}
               checked={selectedAnswer === option}
               onChange={() => onSelectAnswer(option)}
+              disabled={isLocked}
             />
             <span>{option}</span>
           </label>

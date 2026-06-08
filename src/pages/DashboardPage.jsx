@@ -1,9 +1,47 @@
-import { ArrowRight, BarChart3, CheckCircle2, Clock, ShieldCheck } from 'lucide-react';
+import { useMemo } from 'react';
+import {
+  ArrowRight,
+  BarChart3,
+  CheckCircle2,
+  ClipboardCheck,
+  Clock,
+  FileText,
+  ShieldCheck,
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
-import ExamCard from '../components/ExamCard.jsx';
 import { exams } from '../data/exams.js';
 
+function readJson(key, fallback) {
+  try {
+    return JSON.parse(window.localStorage.getItem(key) || JSON.stringify(fallback));
+  } catch {
+    return fallback;
+  }
+}
+
 export default function DashboardPage() {
+  const dashboard = useMemo(() => {
+    const results = readJson('examPortalResultHistory', []);
+    const latestResult = readJson('examPortalLatestResult', null);
+    const submissions = results.length > 0 ? results : latestResult ? [latestResult] : [];
+    const completedCount = submissions.length;
+    const averageScore =
+      completedCount > 0
+        ? Math.round(
+            submissions.reduce((total, result) => total + result.percentage, 0) / completedCount,
+          )
+        : 0;
+    const passedCount = submissions.filter((result) => result.status === 'Passed').length;
+
+    return {
+      submissions,
+      completedCount,
+      averageScore,
+      passedCount,
+      latestResult: submissions[0],
+    };
+  }, []);
+
   return (
     <section className="home-page">
       <section className="home-hero">
@@ -22,8 +60,8 @@ export default function DashboardPage() {
             <Link className="secondary-button hero-button" to="/register">
               Register
             </Link>
-            <Link className="primary-button hero-button" to="/exam/math-101">
-              Start Demo Exam
+            <Link className="primary-button hero-button" to="/exams">
+              Browse Exams
               <ArrowRight size={18} />
             </Link>
             <Link className="ghost-button hero-button" to="/results">
@@ -66,17 +104,62 @@ export default function DashboardPage() {
 
       <section className="metric-strip" aria-label="Platform statistics">
         <div>
-          <strong>12k+</strong>
-          <span>Exams completed</span>
+          <strong>{exams.length}</strong>
+          <span>Available exams</span>
         </div>
         <div>
-          <strong>98%</strong>
-          <span>Submission success</span>
+          <strong>{dashboard.completedCount}</strong>
+          <span>Your submissions</span>
         </div>
         <div>
-          <strong>24/7</strong>
-          <span>Exam access</span>
+          <strong>{dashboard.averageScore}%</strong>
+          <span>Average score</span>
         </div>
+      </section>
+
+      <section className="dashboard-grid" aria-label="Dashboard summary">
+        <article>
+          <div className="side-card-title">
+            <ClipboardCheck size={20} />
+            <h2>Latest Attempt</h2>
+          </div>
+          {dashboard.latestResult ? (
+            <div className="dashboard-latest">
+              <strong>{dashboard.latestResult.examTitle}</strong>
+              <span>
+                {dashboard.latestResult.percentage}% - {dashboard.latestResult.status}
+              </span>
+              <Link className="secondary-button" to="/submissions">
+                View Submission
+              </Link>
+            </div>
+          ) : (
+            <div className="dashboard-latest">
+              <strong>No attempts yet</strong>
+              <span>Start an exam to create your first submission record.</span>
+              <Link className="secondary-button" to="/exams">
+                Choose Exam
+              </Link>
+            </div>
+          )}
+        </article>
+        <article>
+          <BarChart3 size={24} />
+          <h2>Performance Snapshot</h2>
+          <div className="dashboard-mini-stats">
+            <span>Passed: {dashboard.passedCount}</span>
+            <span>Average: {dashboard.averageScore}%</span>
+            <span>Records: {dashboard.completedCount}</span>
+          </div>
+        </article>
+        <article>
+          <Clock size={24} />
+          <h2>Next Recommended</h2>
+          <p>{exams[0].title}</p>
+          <Link className="primary-button" to={`/exam/${exams[0].id}`}>
+            Start Demo
+          </Link>
+        </article>
       </section>
 
       <section className="feature-grid" aria-label="Platform features">
@@ -86,31 +169,37 @@ export default function DashboardPage() {
           <p>Structured sessions, timed tests, and clear exam flow for reliable assessment.</p>
         </article>
         <article>
-          <BarChart3 size={24} />
-          <h2>Instant Insights</h2>
-          <p>Results are easy to review, compare, and act on after each assessment.</p>
+          <FileText size={24} />
+          <h2>Submission Records</h2>
+          <p>Every attempt stores score, timing, status, and answer review details.</p>
         </article>
         <article>
-          <Clock size={24} />
-          <h2>Timed Workflow</h2>
-          <p>Students always know how much time remains and where they are in the test.</p>
+          <CheckCircle2 size={24} />
+          <h2>Quick Review</h2>
+          <p>Use results and submissions pages to track progress after each exam.</p>
         </article>
       </section>
 
-      <section className="page-stack">
+      <section className="dashboard-actions">
         <header className="section-header">
           <div>
-            <p className="eyebrow">Student Dashboard</p>
-            <h1>Available Exams</h1>
+            <p className="eyebrow">Quick Actions</p>
+            <h1>Continue Your Workflow</h1>
           </div>
-          <span className="section-note">Choose an exam to begin</span>
         </header>
 
-        <div className="exam-grid">
-          {exams.map((exam) => (
-            <ExamCard exam={exam} key={exam.id} />
-          ))}
-        </div>
+        <Link to="/exams">
+          <FileText size={20} />
+          Browse all exams
+        </Link>
+        <Link to="/results">
+          <BarChart3 size={20} />
+          Check result dashboard
+        </Link>
+        <Link to="/submissions">
+          <ClipboardCheck size={20} />
+          Review submissions
+        </Link>
       </section>
     </section>
   );
